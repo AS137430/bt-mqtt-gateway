@@ -11,7 +11,7 @@ _LOGGER = logger.get(__name__)
 
 STATE_ON = 'ON'
 STATE_OFF = 'OFF'
-
+STATE_ONLINE = 'online'
 
 class SwitchbotWorker(BaseWorker):
   def _setup(self):
@@ -20,9 +20,12 @@ class SwitchbotWorker(BaseWorker):
     for name, mac in self.devices.items():
       _LOGGER.info("Adding %s device '%s' (%s)", repr(self), name, mac)
       self.devices[name] = {"bot":None,"state":STATE_OFF,"mac":mac} 
-     
+ 
   def format_state_topic(self, *args):
     return '/'.join([self.state_topic_prefix, *args])
+
+  def format_availability_topic(self, *args):
+    return '/'.join([self.state_topic_prefix, *args])+'/available'
 
   def status_update(self):
     from bluepy import btle
@@ -73,6 +76,8 @@ class SwitchbotWorker(BaseWorker):
 
   def update_device_state(self, name, value):
     ret = []
+
+    ret.append(MqttMessage(topic=self.format_availability_topic(name), payload=STATE_ONLINE))
     ret.append(MqttMessage(topic=self.format_state_topic(name), payload=value))
     return ret
 
