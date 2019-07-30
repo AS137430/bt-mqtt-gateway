@@ -1,3 +1,5 @@
+import json
+
 import paho.mqtt.client as mqtt
 import logger
 
@@ -11,10 +13,15 @@ class MqttClient:
     self._config = config
     self._mqttc = mqtt.Client(client_id=self.client_id,
                               clean_session=False,
-                              userdata = {'global_topic_prefix': self.topic_prefix})
+                              userdata={'global_topic_prefix': self.topic_prefix})
 
     if self.username and self.password:
       self.mqttc.username_pw_set(self.username, self.password)
+
+    if self.ca_cert:
+      cert_reqs = mqtt.ssl.CERT_REQUIRED if self.ca_verify else mqtt.ssl.CERT_NONE
+      self.mqttc.tls_set(self.ca_cert, cert_reqs = cert_reqs)
+      self.mqttc.tls_insecure_set(not self.ca_verify)
 
     if self.availability_topic:
       topic = self._format_topic(self.availability_topic)
@@ -50,6 +57,21 @@ class MqttClient:
     return self._config['password'] if 'password' in self._config else None
 
   @property
+  def ca_cert(self):
+    return self._config['ca_cert'] if 'ca_cert' in self._config else None
+
+  @property
+  def ca_verify(self):
+    if 'ca_verify' in self._config:
+      # Constrain config input to boolean value
+      if self._config['ca_verify']:
+        return True
+      else:
+        return False
+    else:
+      return True
+
+  @property
   def topic_prefix(self):
     return self._config['topic_prefix'] if 'topic_prefix' in self._config else None
 
@@ -61,7 +83,13 @@ class MqttClient:
   def mqttc(self):
     return self._mqttc
 
+  def on_connect(self, client, userdata, flags, rc):
+    if self.availability_topic:
+      self.publish([MqttMessage(topic=self.availability_topic, payload=LWT_ONLINE, retain=True)])
+
   def callbacks_subscription(self, callbacks):
+    self.mqttc.on_connect = self.on_connect
+
     self.mqttc.connect(self.hostname, port=self.port)
 
     for topic, callback in callbacks:
@@ -72,15 +100,13 @@ class MqttClient:
 
     self.mqttc.loop_start()
 
-    if self.availability_topic:
-      self.publish([MqttMessage(topic=self.availability_topic, payload=LWT_ONLINE, retain=True)])
-
   def __del__(self):
     if self.availability_topic:
       self.publish([MqttMessage(topic=self.availability_topic, payload=LWT_OFFLINE, retain=True)])
 
   def _format_topic(self, topic):
     return "{}/{}".format(self.topic_prefix, topic) if self.topic_prefix else topic
+
 
 class MqttMessage:
   def __init__(self, topic=None, payload=None, retain=False):
@@ -116,3 +142,21 @@ class MqttMessage:
 
   def __str__(self):
     return self.__repr__()
+
+
+class MqttConfigMessage(MqttMessage):
+  SENSOR = 'sensor'
+  CLIMATE = 'climate'
+  BINARY_SENSOR = 'binary_sensor'
+
+  def __init__(self, component, name, payload=None, retain=False):
+    super().__init__("{}/{}/config".format(component, name), json.dumps(payload), retain)
+
+  @property
+  def retain(self):
+    return self._retain
+
+  @retain.setter
+  def retain(self, new_retain):
+    self._retain = new_retain
+

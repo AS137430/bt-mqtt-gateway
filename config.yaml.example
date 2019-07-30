@@ -3,11 +3,16 @@ mqtt:
   port: 1883
   username: user
   password: password
+  #ca_cert: /etc/ssl/certs/ca-certificates.crt # Uncomment to enable MQTT TLS, update path to appropriate location.
+  #ca_verify: False              # Verify TLS certificate chain and host, disable for testing with self-signed certificates, default to True
   topic_prefix: hostname         # All messages will have that prefix added, remove if you dont need this.
   client_id: bt-mqtt-gateway
   availability_topic: lwt_topic
 
 manager:
+  sensor_config:
+    topic: homeassistant
+    retain: true
   topic_subscription:
     update_all:
       topic: homeassistant/status
@@ -23,7 +28,11 @@ manager:
     thermostat:
       args:
         devices:
-          bedroom: 00:11:22:33:44:55
+          bedroom: 00:11:22:33:44:55  # Simple format
+          living_room:                # Extended format with additional configuration
+            mac: 00:11:22:33:44:55
+            discovery_temperature_topic: some/sensor/with/temperature       # Optional current_temperature_topic for HASS discovery
+            discovery_temperature_template: "{{ value_json.temperature }}"  # Optional current_temperature_template for HASS discovery
         topic_prefix: thermostat
       topic_subscription: thermostat/+/+/set
       update_interval: 60
@@ -68,11 +77,23 @@ manager:
           ix: 00:11:22:33:44:55
           ia: 11:22:33:44:55:66
         topic_prefix: toothbrush
-      update_interval: 10 
+      update_interval: 10
+    toothbrush_homeassistant:
+      args:
+        autodiscovery_prefix: homeassistant
+        topic_prefix: toothbrush
+        devices:
+          ix:
+            name: IX
+            mac: 00:11:22:33:44:55
+          ia:
+            name: IA
+            mac: 11:22:33:44:55:66
+      update_interval: 10
     switchbot:
       args:
         devices:
-          heater: 00:11:22:33:44:55 
+          heater: 00:11:22:33:44:55
         topic_prefix: switchbot/bathroom
         state_topic_prefix: switchbot/bathroom
       topic_subscription: switchbot/+/+/set

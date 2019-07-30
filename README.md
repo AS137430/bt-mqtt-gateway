@@ -40,7 +40,7 @@ On a modern Linux system, just a few steps are needed to get the gateway working
 The following example shows the installation under Debian/Raspbian:
 
 ```shell
-sudo apt-get install git python3 python3-pip bluetooth bluez
+sudo apt-get install git python3 python3-pip python3-wheel bluetooth bluez libglib2.0-dev
 git clone https://github.com/zewelor/bt-mqtt-gateway.git
 cd bt-mqtt-gateway
 sudo pip3 install -r requirements.txt
@@ -114,21 +114,7 @@ mosquitto_pub -h localhost -t 'mithermometer/update_interval' -m '30'
 
 ## Custom worker development
 
-Create custom worker in workers directory. Add config to the example config:
- 
-### Example config entry
-
-```yaml
-    timeworker:
-      args:
-        topic_prefix: cool_time_worker
-      update_interval: 1800
-```
-
-Variables set in args section will be set as object attributes in [BaseWorker.__init__](https://github.com/zewelor/bt-mqtt-gateway/blob/master/workers/base.py#L2)
-
-topic_prefix, if specified, will be added to each mqtt message. Alongside with global_prefix set for gateway
-
+Create custom worker in workers [directory](https://github.com/zewelor/bt-mqtt-gateway/tree/master/workers). 
 
 ### Example simple worker
 
@@ -153,6 +139,21 @@ class TimeWorker(BaseWorker):
 `_setup` method - add / declare needed variables.
 
 `status_update` method - It will be called using specified update_interval
+ 
+### Example config entry
+
+Add config to the example [config](https://github.com/zewelor/bt-mqtt-gateway/blob/master/config.yaml.example):
+
+```yaml
+    timeworker:
+      args:
+        topic_prefix: cool_time_worker
+      update_interval: 1800
+```
+
+Variables set in args section will be set as object attributes in [BaseWorker.__init__](https://github.com/zewelor/bt-mqtt-gateway/blob/master/workers/base.py#L2)
+
+topic_prefix, if specified, will be added to each mqtt message. Alongside with global_prefix set for gateway
 
 ## Built With
 
