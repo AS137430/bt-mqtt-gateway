@@ -110,7 +110,9 @@ manager:
     switchbot:
       args:
         devices:
-          heater: 00:11:22:33:44:55
+          heater: 
+            mac: 00:11:22:33:44:55
+            pw: IAMTHEPASSW0RD
         topic_prefix: switchbot/bathroom
         state_topic_prefix: switchbot/bathroom
       topic_subscription: switchbot/+/+/set
