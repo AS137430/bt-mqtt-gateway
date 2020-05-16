@@ -1,5 +1,6 @@
 from builtins import staticmethod
 import logging
+import zlib
 
 from mqtt import MqttMessage
 
@@ -17,9 +18,19 @@ class SwitchbotWorker(BaseWorker):
     def _setup(self):
 
         _LOGGER.info("Adding %d %s devices", len(self.devices), repr(self))
-        for name, mac in self.devices.items():
-            _LOGGER.info("Adding %s device '%s' (%s)", repr(self), name, mac)
-            self.devices[name] = {"bot": None, "state": STATE_OFF, "mac": mac}
+        for name, obj in self.devices.items():
+            _LOGGER.info("Adding %s device '%s' (%s)", repr(self), name, obj)
+            if isinstance(obj, str):
+                self.devices[name] = {"bot": None, "state": STATE_OFF, "mac": obj}
+            elif isinstance(obj, dict):
+                data = obj.get("pw").encode()
+                crc = zlib.crc32(data)
+                pw = crc.to_bytes(4, 'big')
+                self.devices[name] = {
+                    "mac": obj["mac"],
+                    "bot": None,
+                    "pw": pw,
+                    "state": STATE_OFF}
 
     def format_state_topic(self, *args):
         return "/".join([self.state_topic_prefix, *args])
@@ -47,7 +58,6 @@ class SwitchbotWorker(BaseWorker):
 
     def on_command(self, topic, value):
         from bluepy import btle
-        import binascii
         from bluepy.btle import Peripheral
 
         _, _, device_name, _ = topic.split("/")
@@ -73,12 +83,18 @@ class SwitchbotWorker(BaseWorker):
             hand = hand_service.getCharacteristics(
                 "cba20002-224d-11e6-9fb8-0002a5d5c51b"
             )[0]
+            if bot["pw"]:
+                cmd = b'\x57\x11' + bot["pw"]
+            else:
+                cmd = b'\x57\x01'
             if value == STATE_ON:
-                hand.write(binascii.a2b_hex("570101"))
+                cmd += b'\x01'
+                hand.write(cmd)
             elif value == STATE_OFF:
-                hand.write(binascii.a2b_hex("570102"))
+                cmd += b'\x02'
+                hand.write(cmd)
             elif value == "PRESS":
-                hand.write(binascii.a2b_hex("570100"))
+                hand.write(cmd)
             bot["bot"].disconnect()
         except btle.BTLEException as e:
             logger.log_exception(
