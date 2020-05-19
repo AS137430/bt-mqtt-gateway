@@ -46,8 +46,7 @@ On a modern Linux system, just a few steps are needed to get the gateway working
 The following example shows the installation under Debian/Raspbian:
 
 ```shell
-sudo apt-get install git python3 python3-pip python3-wheel bluetooth bluez libglib2.0-dev
-sudo pip3 install virtualenv
+sudo apt-get install git python3 python3-virtualenv python3-pip python3-wheel bluetooth bluez libglib2.0-dev
 git clone https://github.com/zewelor/bt-mqtt-gateway.git
 cd bt-mqtt-gateway
 virtualenv -p python3 .venv
@@ -81,7 +80,7 @@ This file needs to be created first:
 
 ```shell
 cp config.yaml.example config.yaml
-nano config.yaml
+vim config.yaml
 source .venv/bin/activate
 sudo ./gateway.py
 ```
@@ -115,7 +114,7 @@ Continuous background execution can be done using the example Systemd service un
    
 ```shell
 sudo cp bt-mqtt-gateway.service /etc/systemd/system/
-sudo nano /etc/systemd/system/bt-mqtt-gateway.service (modify path of bt-mqtt-gateway)
+sudo vim /etc/systemd/system/bt-mqtt-gateway.service
 sudo systemctl daemon-reload
 sudo systemctl start bt-mqtt-gateway
 sudo systemctl status bt-mqtt-gateway
